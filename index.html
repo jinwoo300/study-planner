@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONARCH ASTRA // 30-Day Master Study Room (Live Peer Sync) - Aryan & Friend</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .heading-font { font-family: 'Space Grotesk', sans-serif; }
+
+    :root {
+      --void-bg: #020408;
+      --panel-glass: rgba(8, 12, 22, 0.92);
+      --card-glass: rgba(11, 16, 30, 0.94);
+      --astra-cyan: #00F0FF;
+      --astra-red: #EF4444;
+      --astra-emerald: #10B981;
+      --astra-amber: #F59E0B;
+    }
+
+    body {
+      background-color: var(--void-bg);
+      color: #F8FAFC;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #ambientCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* Warden Lockdown Modal */
+    #wardenLockScreen {
+      position: fixed;
+      inset: 0;
+      background: rgba(3, 5, 10, 0.97);
+      backdrop-filter: blur(28px);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .pulsing-alert {
+      animation: alertPulse 1.8s infinite alternate;
+    }
+    @keyframes alertPulse {
+      0% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.4); }
+      100% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.8); border-color: rgba(239, 68, 68, 0.9); }
+    }
+
+    .astra-orb-warden {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #00F0FF, #8B5CF6 60%, #EF4444 95%);
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.6), 0 0 60px rgba(239, 68, 68, 0.4);
+      animation: wardenBreath 2.8s ease-in-out infinite alternate;
+    }
+    @keyframes wardenBreath {
+      0% { transform: scale(0.96); filter: brightness(1); }
+      100% { transform: scale(1.08); filter: brightness(1.35); }
+    }
+
+    .glass-hud {
+      background: var(--panel-glass);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(0, 240, 255, 0.22);
+      box-shadow: 0 16px 45px -10px rgba(0, 0, 0, 0.9);
+    }
+    .glass-card {
+      background: var(--card-glass);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 240, 255, 0.5);
+      transform: translateY(-2px);
+    }
+    .day-completed {
+      background: rgba(16, 185, 129, 0.08) !important;
+      border-color: rgba(16, 185, 129, 0.45) !important;
+    }
+
+    .astra-check {
+      appearance: none;
+      width: 22px; height: 22px;
+      border: 2px solid #475569;
+      border-radius: 6px;
+      background: #080D1A;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+      flex-shrink: 0;
+    }
+    .astra-check:checked {
+      background: #10B981;
+      border-color: #10B981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    }
+    .astra-check:checked::after {
+      content: '✔';
+      font-size: 14px;
+      color: #022C22;
+      font-weight: 900;
+    }
+
+    .step-pill {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pill-theory { background: rgba(0, 240, 255, 0.15); color: #38BDF8; border: 1px solid rgba(0, 240, 255, 0.35); }
+    .pill-example { background: rgba(99, 102, 241, 0.18); color: #A5B4FC; border: 1px solid rgba(99, 102, 241, 0.4); }
+    .pill-exercise { background: rgba(245, 158, 11, 0.18); color: #FCD34D; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .pill-mcq { background: rgba(239, 68, 68, 0.22); color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.45); }
+    .pill-exam { background: rgba(168, 85, 247, 0.22); color: #E9D5FF; border: 1px solid rgba(168, 85, 247, 0.5); }
+    .pill-arc { background: rgba(16, 185, 129, 0.18); color: #6EE7B7; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+    /* Print / PDF Styles for sharing with phone or printing */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+      #ambientCanvas, .no-print, header .border-b, #soundToggleBtn, #timerBtn, #resetTimerBtn, input {
+        display: none !important;
+      }
+      .glass-hud, .glass-card {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        color: #000000 !important;
+        page-break-inside: avoid;
+        margin-bottom: 16px !important;
+      }
+      h1, h2, h3, strong, span, p {
+        color: #0f172a !important;
+        text-shadow: none !important;
+      }
+      .step-pill {
+        border: 1px solid #94a3b8 !important;
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+      }
+      .astra-check {
+        border: 2px solid #000 !important;
+        background: #fff !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-3 md:p-6 pb-28">
+
+  <canvas id="ambientCanvas"></canvas>
+
+  <!-- TOP ASTRA AGI COMMAND CENTER -->
+  <header class="max-w-7xl mx-auto mb-6 relative z-10">
+    <div class="glass-hud rounded-3xl p-5 md:p-8 relative overflow-hidden">
+      
+      <!-- Top Status Meta Bar with Live Cloud Room Sync -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-800 text-xs">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-bold tracking-wider">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span> MONARCH ASTRA // 30-DAY MASTER ROADMAP
+          </span>
+          <div id="syncBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-bold tracking-wider cursor-pointer" onclick="openRoomModal()" title="Click to manage sync room">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span id="syncStatusText">LIVE ROOM: #aryan-study</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-slate-400">
+          <button onclick="openRoomModal()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold border border-slate-700 transition flex items-center gap-1.5">
+            👥 Pair Room Settings
+          </button>
+          <span class="text-slate-600">|</span>
+          <span id="liveClock" class="mono text-slate-200 font-bold">23:00:00 IST</span>
+        </div>
+      </div>
+
+      <!-- Identity + Astra Orb + Predictive Telemetry -->
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div class="flex items-start sm:items-center gap-5">
+          <div class="astra-orb-warden flex-shrink-0 flex items-center justify-center">
+            <span class="mono text-slate-950 font-black text-xs">ASTRA</span>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                11-12 HR POWER DAILY LOAD
+              </span>
+              <span class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                INTENSIVE 50+ MCQs/DAY
+              </span>
+              <span class="px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                MOBILE & PRINT FRIENDLY
+              </span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight heading-font">
+              Monarch Astra 30-Day Master Planner
+            </h1>
+            <p class="text-sm md:text-base text-slate-300 mt-2 max-w-3xl leading-relaxed">
+              <strong class="text-cyan-300">Aryan Paladiya & Study Partner</strong> • 30-Day Blueprint:
+              <span class="text-blue-400 font-semibold">Physics Ch 1 to 7</span> | 
+              <span class="text-pink-400 font-semibold">Chemistry Ch 1 to 3 + IUPAC + Ch 6</span> | 
+              <span class="text-amber-400 font-semibold">Maths Ch 3, 4, 2, 5, 6, 12 ➔ Ch 1 (End of Month)</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Master Telemetry Radial HUD -->
+        <div class="flex items-center gap-6 bg-slate-950/90 p-5 rounded-2xl border border-slate-700/80 w-full lg:w-auto justify-between lg:justify-start">
+          <div class="relative w-24 h-24 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-full h-full transform -rotate-90">
+              <circle cx="48" cy="48" r="40" stroke="#1E293B" stroke-width="7" fill="transparent"/>
+              <circle id="globalRing" cx="48" cy="48" r="40" stroke="#00F0FF" stroke-width="7" 
+                      stroke-dasharray="251.32" stroke-dashoffset="251.32" stroke-linecap="round" fill="transparent" class="transition-all duration-700"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span id="globalPct" class="text-lg font-black text-white mono">0%</span>
+              <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Progress</span>
+            </div>
+          </div>
+          <div class="space-y-1 text-xs">
+            <div class="text-slate-400">Days Finished: <strong id="statDays" class="text-white text-sm font-bold">0</strong> / 30</div>
+            <div class="text-slate-400">Steps Synchronized: <strong id="statTasks" class="text-cyan-400 text-sm font-bold">0</strong> / <span id="statTotalTasks">0</span></div>
+            <div class="text-slate-400">Total MCQs Mastered: <strong id="statMcqTotal" class="text-rose-400 text-sm font-bold">0</strong> / 1,450</div>
+            <div class="text-slate-400">Predicted Board %: <strong id="statGsebPred" class="text-emerald-400 font-bold">68.5%</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVE AUTONOMOUS DIRECTIVE HUD -->
+      <div class="mt-6 p-4 rounded-2xl bg-gradient-to-r from-cyan-950/60 via-slate-900/80 to-purple-950/60 border border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+          <span class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 font-black text-lg">
+            ⚡
+          </span>
+          <div>
+            <span class="text-[10px] font-black uppercase tracking-widest text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-500/40">
+              CURRENT FOCUS TARGET
+            </span>
+            <div id="directiveText" class="text-sm font-bold text-white mt-1">
+              Engage Day 1: Physics Ch 1 + Chem Ch 1 + Maths Ch 3 (11.5 Hours • 50 MCQs Required)
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openShareModal()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm">
+            📱 Share with Friend
+          </button>
+          <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition flex items-center gap-1.5 shadow-sm">
+            🖨️ Print / PDF
+          </button>
+          <button onclick="scrollToCurrentDay()" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+            🎯 Jump To Active Day
+          </button>
+        </div>
+      </div>
+
+      <!-- 5-STAGE STRICT PIPELINE STRIP -->
+      <div class="mt-5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span class="font-extrabold text-white tracking-wider uppercase text-[11px]">Strict 5-Stage Protocol:</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="step-pill pill-theory">1. Theory & Proofs (2.5h)</span>
+          <span class="text-slate-600">➔</span>
+          <span class="step-pill pill-example">2. NCERT Examples (2.0h)</span>
+          <span class="text-slate-600">➔</span>
+          <span class="step-pill pill-exercise">3. Exercises (2.5h)</span>
+          <span class="text-slate-600">➔</span>
+          <span class="step-pill pill-mcq">4. Intensive MCQs (3.0h • 50 Qs)</span>
+          <span class="text-slate-600">➔</span>
+          <span class="step-pill pill-exam">5. Chapter Exam (1.5h)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="soundToggleBtn" onclick="toggleAudio()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition border border-slate-700">
+            🔊 Warden Audio: ON
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Controls & Focus Pomodoro -->
+      <div class="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2.5 flex-1 max-w-2xl">
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="searchInput" oninput="handleSearch()" placeholder="⚡ Search formula, chapter, topic..." 
+                   class="w-full bg-slate-900/90 text-white placeholder-slate-500 text-xs px-3.5 py-2 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-400">
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button onclick="filterWeek('all')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-black bg-cyan-500 text-slate-950 transition">All 30 Days</button>
+            <button onclick="filterWeek('w1')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Week 1 (Ch 3 Start)</button>
+            <button onclick="filterWeek('w2')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Week 2</button>
+            <button onclick="filterWeek('w3')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Week 3</button>
+            <button onclick="filterWeek('w4')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Week 4 (Ch 1 Seal)</button>
+            <button onclick="filterWeek('tests')" class="week-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-950/60 text-purple-300 border border-purple-500/40 hover:bg-purple-900 transition">🏆 Exams Only</button>
+          </div>
+        </div>
+
+        <!-- Integrated Cyber Pomodoro HUD -->
+        <div class="flex items-center gap-3 bg-slate-950/90 px-4 py-2 rounded-xl border border-slate-800 shadow-inner">
+          <span class="text-xs text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> Warden Session:
+          </span>
+          <span id="timerText" class="mono text-lg font-black text-white tracking-widest">50:00</span>
+          <button id="timerBtn" onclick="togglePomodoro()" class="px-3 py-1 text-xs font-black rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition">Start</button>
+          <button onclick="resetPomodoro()" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">Reset</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 30-DAY MASTER QUANTUM ROADMAP -->
+  <main class="max-w-7xl mx-auto relative z-10">
+    <div id="daysGrid" class="space-y-4">
+      <!-- 30-Day Cards injected dynamically with 11-12 Hour Load and 50+ MCQs -->
+    </div>
+  </main>
+
+  <!-- LIVE PAIR SYNC ROOM MODAL -->
+  <div id="roomModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,240,255,0.2)] space-y-5 text-left">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl">👥</span>
+          <div>
+            <h3 class="text-lg font-bold text-white heading-font">Live Study Room Sync</h3>
+            <span class="text-[10px] text-cyan-400 font-mono">REAL-TIME PEER-TO-PEER DASHBOARD</span>
+          </div>
+        </div>
+        <button onclick="closeRoomModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 text-xs text-slate-300 space-y-2">
+        <div class="font-bold text-cyan-300 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          How Live Dashboard Sync Works:
+        </div>
+        <p>
+          Both you and your friend connect to the <strong>same Secret Room Key</strong>. Whenever you check a topic or write a score note, <strong>it updates instantly on your friend's phone screen</strong>, and whatever he checks appears instantly on your laptop!
+        </p>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-400 font-bold mb-1">Your Display Name:</label>
+          <input type="text" id="syncUserNameInput" placeholder="Aryan" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold text-xs focus:outline-none focus:border-cyan-400">
+        </div>
+
+        <div>
+          <label class="block text-slate-400 font-bold mb-1">Pair Room Key (Share this with your friend):</label>
+          <div class="flex gap-2">
+            <input type="text" id="syncRoomKeyInput" placeholder="aryan-study-2026" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono font-bold text-xs focus:outline-none focus:border-cyan-400">
+            <button onclick="generateRandomRoom()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">🎲 New</button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-[11px]">
+          <span class="text-slate-400">Connection Status:</span>
+          <span id="modalConnectionStatus" class="font-bold text-emerald-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Connected & Synced
+          </span>
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-2">
+        <button onclick="applyRoomSettings()" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition shadow-[0_0_20px_rgba(0,240,255,0.3)]">
+          💾 Save & Connect Room
+        </button>
+        <button onclick="copyFriendShareLink()" id="copyRoomLinkBtn" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition flex items-center justify-center gap-2">
+          🔗 Copy Direct Mobile Sync Link
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE WITH FRIEND MODAL (MOBILE / NO COMPUTER) -->
+  <div id="shareModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+    <div class="max-w-lg w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-5 text-left">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">📱</span>
+          <h3 class="text-lg font-bold text-white heading-font">Share 30-Day Plan with Friend</h3>
+        </div>
+        <button onclick="closeShareModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Your friend has no computer? Send him the interactive planner or the direct sync link so you both see the same progress in real time!
+      </p>
+      <div class="space-y-3">
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-cyan-500/30 text-xs">
+          <div class="font-bold text-cyan-400 mb-1 flex items-center gap-1.5">
+            <span>⚡</span> Option 1: Direct Live-Sync Room Link (Both Phones/Laptops in Sync)
+          </div>
+          <div class="text-slate-400 mb-2">Send this link on WhatsApp. When he opens it on Chrome on his phone, whatever either of you checks reflects live!</div>
+          <button onclick="copyFriendShareLink()" id="copySyncLinkBtn2" class="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition">
+            🔗 Copy Direct Live Sync Link
+          </button>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+          <div class="font-bold text-emerald-400 mb-1">Option 2: Send as Clean PDF Document</div>
+          <div class="text-slate-400 mb-2">Opens print preview. Choose <strong>"Save as PDF"</strong> and share the PDF file with your friend.</div>
+          <button onclick="window.print()" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
+            📄 Generate & Download PDF
+          </button>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+          <div class="font-bold text-purple-400 mb-1">Option 3: WhatsApp Text Summary</div>
+          <div class="text-slate-400 mb-2">Copies formatted English 30-day timetable text to paste directly into WhatsApp.</div>
+          <button onclick="copyWhatsAppRoadmap()" id="copySummaryBtn" class="w-full py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition">
+            📋 Copy WhatsApp Roadmap Text
+          </button>
+        </div>
+      </div>
+      <div class="pt-2 text-center">
+        <button onclick="closeShareModal()" class="text-xs text-slate-400 hover:text-white underline">Close Window</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="max-w-7xl mx-auto mt-8 relative z-10 flex flex-col md:flex-row items-center justify-between gap-4 p-5 glass-hud rounded-2xl text-xs text-slate-400">
+    <div class="flex items-center gap-2.5">
+      <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_10px_#00F0FF]"></span>
+      <span class="text-slate-300">Clean Focus Mode Active • 100% Mobile & WhatsApp Compatible • Progress saved locally.</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="exportData()" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold transition border border-slate-700">📥 Export Backup</button>
+      <button onclick="resetData()" class="px-3.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 font-semibold transition border border-rose-800/50">⚠️ Reset Data</button>
+    </div>
+  </footer>
+
+  <script>
+    // 1. NEURAL CANVAS PARTICLES
+    const canvas = document.getElementById('ambientCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, particles = [];
+
+    function resizeCanvas() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.vx = (Math.random() - 0.5) * 0.4;
+        this.vy = (Math.random() - 0.5) * 0.4;
+        this.radius = Math.random() * 1.5 + 0.5;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 0) this.x = width;
+        if (this.x > width) this.x = 0;
+        if (this.y < 0) this.y = height;
+        if (this.y > height) this.y = 0;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
+        ctx.fill();
+      }
+    }
+    for (let i = 0; i < 45; i++) particles.push(new Particle());
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, width, height);
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(0, 240, 255, ${0.14 * (1 - dist / 110)})`;
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // 2. AUDIO ENGINE & SYNTHESIZER
+    let audioActive = true;
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const aCtx = AudioContext ? new AudioContext() : null;
+
+    function playTone(freq = 600, duration = 0.08, type = 'sine') {
+      if (!audioActive || !aCtx) return;
+      try {
+        if (aCtx.state === 'suspended') aCtx.resume();
+        const osc = aCtx.createOscillator();
+        const gain = aCtx.createGain();
+        osc.frequency.setValueAtTime(freq, aCtx.currentTime);
+        osc.type = type;
+        gain.gain.setValueAtTime(0.12, aCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, aCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(aCtx.destination);
+        osc.start();
+        osc.stop(aCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playChord() {
+      if (!audioActive) return;
+      playTone(523.25, 0.15, 'triangle');
+      setTimeout(() => playTone(659.25, 0.2, 'sine'), 60);
+      setTimeout(() => playTone(783.99, 0.3, 'sine'), 120);
+    }
+
+    function toggleAudio() {
+      audioActive = !audioActive;
+      document.getElementById('soundToggleBtn').innerText = audioActive ? '🔊 Warden Audio: ON' : '🔇 Warden Audio: MUTED';
+    }
+
+    // 3. LIVE CLOCK
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0] + ' IST';
+    }, 1000);
+
+    // 4. HIGH-LOAD 11-12 HOUR & 50+ MCQ 30-DAY PIPELINE DATA
+    const roadmapData = [
+      // ==================== WEEK 1 ====================
+      {
+        day: 1, week: 'w1', title: 'Day 1: Ground Zero Launch (11.5 Hours Study Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 1 Theory', text: '1. THEORY (2.5h): Electric Charges, Quantization (q=ne), Conservation, Coulomb\'s Law (scalar & vector form), Superposition Principle derivations.' },
+          { stage: 'example', name: 'Physics Ch 1 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 1.1 to 1.5 solved with full calculations in notebook.' },
+          { stage: 'theory', name: 'Chemistry Ch 1 Theory', text: '1. THEORY (2.5h): Concentration terms (Molarity, Molality, Mole fraction, ppm) & Henry\'s Law (gas in liquid, applications, K_H trends).' },
+          { stage: 'example', name: 'Chemistry Ch 1 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 1.1, 1.2, 1.3 & in-text questions.' },
+          { stage: 'theory', name: 'Maths Ch 3 Theory', text: '1. THEORY (1.5h): Matrices Definition, Order, Types (Row, Col, Square, Diagonal, Identity, Zero), Matrix Equality.' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 50 MCQs): 25 MCQs on Coulomb\'s Law + 25 MCQs on Solution Concentrations (Timed solving).' },
+          { stage: 'arc', name: 'Winter Arc & Italy', text: 'Push Workout (Chest/Triceps) • 2600 kcal surplus (4 eggs/milk/paneer) • 15 min English Reading (Italy DSU).' }
+        ]
+      },
+      {
+        day: 2, week: 'w1', title: 'Day 2: Fields, Raoult\'s Law & Matrix Operations (11.5 Hours Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 1 Theory', text: '1. THEORY (2.5h): Electric Field lines, Dipole axial ($E=\\frac{2kp}{r^3}$) & equatorial ($E=\\frac{-kp}{r^3}$) derivations, Torque ($\\tau=p\\times E$).' },
+          { stage: 'exercise', name: 'Physics Ch 1 Exercise', text: '3. EXERCISE (1.5h): NCERT Exercise 1.1 to 1.10 (Charge calculations and Coulomb forces).' },
+          { stage: 'theory', name: 'Chemistry Ch 1 Theory', text: '1. THEORY (2.5h): Raoult\'s Law for volatile liquids, Ideal/Non-ideal solutions, Positive & Negative deviations, Azeotropes.' },
+          { stage: 'exercise', name: 'Chemistry Ch 1 Exercise', text: '3. EXERCISE (1.5h): NCERT In-text 1.4, 1.5 + Exercise 1.1 to 1.8.' },
+          { stage: 'exercise', name: 'Maths Ch 3 Operations', text: '3. EXERCISE (1.5h): Matrix Addition, Scalar Multiplication, Matrix Multiplication (Ex 3.1 & 3.2 Q1-Q10).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 55 MCQs): 25 MCQs on Electric Dipole/Field + 30 MCQs on Raoult\'s Law & Azeotropes.' },
+          { stage: 'arc', name: 'Winter Arc & Diet', text: 'Pull Workout (Back & Biceps) • 2600 kcal clean food • 3.5 Liters Water.' }
+        ]
+      },
+      {
+        day: 3, week: 'w1', title: 'Day 3: Gauss Law, Colligative Properties & Matrix Powers (12.0 Hours Load)', isTest: false, hours: 12.0,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 1 Theory', text: '1. THEORY (2.5h): Electric Flux, Gauss\'s Law statement, Application 1 (Infinite wire) & Application 2 (Plane sheet).' },
+          { stage: 'example', name: 'Physics Ch 1 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 1.10, 1.11, 1.12.' },
+          { stage: 'theory', name: 'Chemistry Ch 1 Theory', text: '1. THEORY (2.5h): Colligative Properties Pt 1: Relative Lowering of Vapour Pressure & Elevation in Boiling Point ($\\Delta T_b=K_b\\cdot m$).' },
+          { stage: 'exercise', name: 'Chemistry Ch 1 Exercise', text: '3. EXERCISE (1.5h): NCERT Exercise numericals on $\\Delta T_b$ and Raoult\'s Law.' },
+          { stage: 'exercise', name: 'Maths Ch 3 Exercise', text: '3. EXERCISE (1.5h): NCERT Exercise 3.2 complete (Multiplication word problems & commutative proofs).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): 30 MCQs on Gauss\'s Law applications + 30 MCQs on $\\Delta T_b$ numericals.' },
+          { stage: 'arc', name: 'Winter Arc & Legs', text: 'Legs & Core • 100 pushups target • 2600 kcal nutrition.' }
+        ]
+      },
+      {
+        day: 4, week: 'w1', title: 'Day 4: Spherical Shell, Freezing/Osmosis & Transpose (11.5 Hours Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 1 Theory', text: '1. THEORY (2.0h): Gauss Application 3 (Uniformly charged spherical shell inside & outside).' },
+          { stage: 'exercise', name: 'Physics Ch 1 Exercise', text: '3. EXERCISE (2.0h): NCERT Exercise 1.11 to 1.24 complete.' },
+          { stage: 'theory', name: 'Chemistry Ch 1 Theory', text: '1. THEORY (2.5h): Depression in Freezing Point ($\\Delta T_f=K_f\\cdot m$), Osmotic Pressure ($\\pi=CRT$), Reverse Osmosis.' },
+          { stage: 'exercise', name: 'Chemistry Ch 1 Exercise', text: '3. EXERCISE (1.5h): NCERT Exercise numericals on $\\Delta T_f$ and Osmotic pressure.' },
+          { stage: 'theory', name: 'Maths Ch 3 Theory', text: '1. THEORY & EXERCISE (1.5h): Transpose, Symmetric & Skew-Symmetric matrices (Ex 3.3 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 50 MCQs): 25 MCQs on Osmotic pressure + 25 MCQs on Symmetric/Skew-symmetric matrices.' },
+          { stage: 'arc', name: 'Winter Arc Recovery', text: 'Active Recovery & Stretching • 15 min IELTS/TOLC English Reading.' }
+        ]
+      },
+      {
+        day: 5, week: 'w1', title: '🏆 DAY 5: EXAM & MCQs: Physics Ch 1, Chem Ch 1 & Maths Ch 3 Sealed!', isTest: true, hours: 11.5,
+        tasks: [
+          { stage: 'mcq', name: 'Physics Ch 1 MCQs', text: '4. MCQs (2.0h • 60 MCQs): Comprehensive Physics Ch 1 Board & GUJCET MCQ sprint.' },
+          { stage: 'exam', name: 'Physics Ch 1 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam (Coulomb, Gauss, Dipole). Target: 27+/30. (Physics Ch 1 Sealed!)' },
+          { stage: 'theory', name: 'Chemistry Ch 1 Theory', text: '1. THEORY (2.0h): Abnormal Molar Mass, Van \'t Hoff factor ($i$), Degree of dissociation ($\\alpha$) & association.' },
+          { stage: 'mcq', name: 'Chemistry Ch 1 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Solutions All Topics (Concentrations, Raoult, Colligative, Van \'t Hoff).' },
+          { stage: 'exam', name: 'Maths Ch 3 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Matrices. Target: 28+/30. (Maths Ch 3 Sealed!)' },
+          { stage: 'arc', name: 'Winter Arc Fuel', text: 'Push Workout 2 • High calorie peanut butter shake • Scale weigh-in.' }
+        ]
+      },
+      {
+        day: 6, week: 'w1', title: 'Day 6: Physics Ch 2, Chem Ch 2 & Maths Ch 4 (Determinants Launch)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 2 Theory', text: '1. THEORY (2.5h): Electric Potential due to Point Charge, System of Charges, Dipole Potential, Equipotential Surfaces ($E=-dV/dr$).' },
+          { stage: 'example', name: 'Physics Ch 2 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 2.1 to 2.4.' },
+          { stage: 'theory', name: 'Chemistry Ch 2 Theory', text: '1. THEORY (2.5h): Galvanic Cell, Daniell Cell working, Cell Representation & Standard Hydrogen Electrode (SHE).' },
+          { stage: 'example', name: 'Chemistry Ch 2 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 2.1, 2.2.' },
+          { stage: 'theory', name: 'Maths Ch 4 Theory', text: '1. THEORY & EXAMPLES (1.5h): Determinants evaluation (2x2, 3x3), Minors & Cofactors (Ex 4.1 & 4.4).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 50 MCQs): 25 MCQs on Electric Potential + 25 MCQs on SHE & Daniell cell.' },
+          { stage: 'arc', name: 'Winter Arc Prep', text: 'Night Formula Revision • 7.5 hrs sleep for Sunday Mock.' }
+        ]
+      },
+      {
+        day: 7, week: 'w1', title: '🏆 DAY 7: WEEK 1 GRAND MOCK EXAM (11.0 Hours Load)', isTest: true, hours: 11.0,
+        tasks: [
+          { stage: 'exam', name: 'Chemistry Ch 1 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Solutions Exam (Raoult, Colligative, Van \'t Hoff). Target: 27+/30. (Chemistry Ch 1 Sealed!)' },
+          { stage: 'exercise', name: 'Maths Ch 4 Exercise', text: '3. EXERCISE (2.5h): NCERT Exercise 4.1 & Exercise 4.4 complete + Minors/Cofactors proofs.' },
+          { stage: 'exercise', name: 'Physics Ch 2 Exercise', text: '3. EXERCISE (2.5h): NCERT Exercise 2.1 to 2.5 on Potential and Dipoles.' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): 30 MCQs on Determinants properties + 30 MCQs on Electrostatic Potential.' },
+          { stage: 'arc', name: 'Weekly Reflection', text: 'Check scale weight (Target: +0.4 kg towards 65 kg) • Error Diary audit.' }
+        ]
+      },
+
+      // ==================== WEEK 2 ====================
+      {
+        day: 8, week: 'w2', title: 'Day 8: Capacitors, Nernst Equation & Adjoint/Inverse (11.5 Hours Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 2 Theory', text: '1. THEORY (2.5h): Parallel Plate Capacitor ($C=\\varepsilon_0 A/d$), Series & Parallel grouping, Energy stored ($U=\\frac{1}{2}CV^2$).' },
+          { stage: 'example', name: 'Physics Ch 2 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 2.6 to 2.10.' },
+          { stage: 'theory', name: 'Chemistry Ch 2 Theory', text: '1. THEORY (2.5h): Nernst Equation for half/full cell, Equilibrium constant from Nernst, $\\Delta G^\\circ$ relation.' },
+          { stage: 'example', name: 'Chemistry Ch 2 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 2.3, 2.4.' },
+          { stage: 'theory', name: 'Maths Ch 4 Theory', text: '1. THEORY & EXERCISE (1.5h): Adjoint of a Matrix & Inverse using Adjoint theorem (Ex 4.5 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 55 MCQs): 30 MCQs on Nernst equation + 25 MCQs on Capacitors series/parallel.' },
+          { stage: 'arc', name: 'Winter Arc Power', text: 'Chest & Shoulders • High Protein intake • 3L Water.' }
+        ]
+      },
+      {
+        day: 9, week: 'w2', title: 'Day 9: Dielectric Slabs, Kohlrausch Law & Matrix Method (11.5 Hours Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 2 Theory', text: '1. THEORY & EXERCISE (3.0h): Dielectric slab insertion effect on C, V, E, Q, U (Battery on vs off). NCERT Ex 2.6-2.18.' },
+          { stage: 'theory', name: 'Chemistry Ch 2 Theory', text: '1. THEORY (2.5h): Resistance, Conductance, Specific Conductance, Molar Conductivity ($\\Lambda_m$), Kohlrausch\'s Law.' },
+          { stage: 'example', name: 'Chemistry Ch 2 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 2.5 to 2.8.' },
+          { stage: 'theory', name: 'Maths Ch 4 Matrix Method', text: '1. THEORY & EXERCISE (2.0h): Solving system of linear equations using Matrix Method ($AX=B, X=A^{-1}B$, Ex 4.6).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): 30 MCQs on Kohlrausch Law + 30 MCQs on Matrix Inversion & Cramer\'s method.' },
+          { stage: 'arc', name: 'Winter Arc Italy', text: 'Back & Core • 15 min Italian University Research (Politecnico di Torino DSU).' }
+        ]
+      },
+      {
+        day: 10, week: 'w2', title: '🏆 DAY 10: EXAM & MCQs: Physics Ch 2 & Maths Ch 4 Sealed!', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'mcq', name: 'Physics Ch 2 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Potential, Capacitors grouping & Dielectrics timed sprint.' },
+          { stage: 'exam', name: 'Physics Ch 2 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam (Potential, Capacitors, Dielectric). Target: 27+/30. (Physics Ch 2 Sealed!)' },
+          { stage: 'mcq', name: 'Maths Ch 4 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Determinants properties, Inverses & Matrix system.' },
+          { stage: 'exam', name: 'Maths Ch 4 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Determinants & Matrix Method. Target: 28+/30. (Maths Ch 4 Sealed!)' },
+          { stage: 'theory', name: 'Chemistry Ch 2 Theory', text: '1. THEORY & EXERCISE (2.5h): Faraday\'s Laws of Electrolysis ($m=ZIt$), Batteries (Dry, Lead storage, Fuel cell), Rusting.' },
+          { stage: 'arc', name: 'Winter Arc Legs', text: 'Heavy Legs Workout • High protein dinner • 2600 kcal.' }
+        ]
+      },
+      {
+        day: 11, week: 'w2', title: 'Day 11: Current Electricity, Kinetics Launch & Maths Ch 2 (Inverse Trig)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 3 Theory', text: '1. THEORY (2.5h): Electric Current, Drift velocity ($v_d=-eE\\tau/m$), $I$ vs $v_d$ relation, Ohm\'s Law vector form ($J=\\sigma E$), Resistivity vs Temp ($\\alpha$).' },
+          { stage: 'example', name: 'Physics Ch 3 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 3.1 to 3.4.' },
+          { stage: 'theory', name: 'Chemistry Ch 3 Theory', text: '1. THEORY (2.5h): Average & Instantaneous Rate of reaction, Rate Law, Rate Constant ($k$) units.' },
+          { stage: 'example', name: 'Chemistry Ch 3 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 3.1 to 3.4.' },
+          { stage: 'theory', name: 'Maths Ch 2 Theory', text: '1. THEORY & EXERCISE (1.5h): Principal Value Branches ($\\sin^{-1}, \\cos^{-1}, \\tan^{-1}$), Domain & Range table (Ex 2.1 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 50 MCQs): 25 MCQs on Drift Velocity + 25 MCQs on Reaction Rate constants.' },
+          { stage: 'arc', name: 'Winter Arc Arms', text: 'Arms (Biceps & Triceps) • 8 hours quality recovery sleep.' }
+        ]
+      },
+      {
+        day: 12, week: 'w2', title: 'Day 12: Cells/EMF, Integrated Rate Equations & ITF Simplification', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 3 Theory', text: '1. THEORY (2.5h): Cell Internal Resistance ($r$), EMF vs Terminal Voltage ($V=E-Ir$), Cells in Series & Parallel.' },
+          { stage: 'example', name: 'Physics Ch 3 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 3.5, 3.6, 3.7.' },
+          { stage: 'theory', name: 'Chemistry Ch 3 Theory', text: '1. THEORY (2.5h): Order vs Molecularity, Integrated rate equations for Zero & First Order, Half-life ($t_{1/2}$) derivations.' },
+          { stage: 'example', name: 'Chemistry Ch 3 Examples', text: '2. EXAMPLES (1.5h): NCERT Solved Examples 3.5, 3.6.' },
+          { stage: 'theory', name: 'Maths Ch 2 Properties', text: '1. THEORY & EXERCISE (1.5h): Properties of Inverse Trig Functions, Simplification rules (Ex 2.2 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 55 MCQs): 30 MCQs on First-order kinetics & half-life + 25 MCQs on Cells grouping.' },
+          { stage: 'arc', name: 'Winter Arc Push', text: 'Push Workout • High calorie diet (Paneer, rice, nuts).' }
+        ]
+      },
+      {
+        day: 13, week: 'w2', title: 'Day 13: Kirchhoff, Wheatstone & Arrhenius Equation (11.5 Hours Load)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 3 Theory', text: '1. THEORY & EXERCISE (3.0h): Kirchhoff\'s Junction & Loop Rules, Wheatstone Bridge balanced condition (Ex 3.6-3.12).' },
+          { stage: 'theory', name: 'Chemistry Ch 3 Theory', text: '1. THEORY & EXERCISE (3.0h): Arrhenius Equation ($k=Ae^{-E_a/RT}$), Activation energy, Catalysts, Collision Theory (Ex 3.1-3.15).' },
+          { stage: 'mcq', name: 'Maths Ch 2 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Inverse Trig Functions master drill.' },
+          { stage: 'exam', name: 'Maths Ch 2 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on ITF. Target: 28+/30. (Maths Ch 2 Sealed!)' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.0h • 50 MCQs): 25 MCQs on Kirchhoff Circuits + 25 MCQs on Arrhenius Equation.' },
+          { stage: 'arc', name: 'Winter Arc Pull', text: 'Pull Workout • Evening Walk • Mindset check.' }
+        ]
+      },
+      {
+        day: 14, week: 'w2', title: '🏆 DAY 14: EXAM: Physics Ch 3 & Chemistry Ch 2 + Ch 3 Sealed!', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'mcq', name: 'Physics Ch 3 MCQs', text: '4. MCQs (2.0h • 60 MCQs): Current Electricity, Kirchhoff, Wheatstone bridge sprint.' },
+          { stage: 'exam', name: 'Physics Ch 3 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam (Drift, Kirchhoff, Wheatstone). Target: 27+/30. (Physics Ch 3 Sealed!)' },
+          { stage: 'exam', name: 'Chemistry Ch 2 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Electrochemistry. Target: 27+/30. (Chemistry Ch 2 Sealed!)' },
+          { stage: 'exam', name: 'Chemistry Ch 3 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Chemical Kinetics. Target: 27+/30. (Physical Chem 100% Done!)' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): Physical Chemistry Grand Cumulative 60 MCQs.' },
+          { stage: 'arc', name: 'Milestone Halfway', text: 'Review error log • Physical Chemistry and Matrices/Determinants fully mastered!' }
+        ]
+      },
+
+      // ==================== WEEK 3 ====================
+      {
+        day: 15, week: 'w3', title: 'Day 15: Lorentz Force, Organic IUPAC Launch & Continuity Entry (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 4 Theory', text: '1. THEORY & EXAMPLES (3.0h): Magnetic Lorentz Force ($F=q(v\\times B)$), Motion in B-field (Helical path, radius, cyclotron).' },
+          { stage: 'theory', name: 'Organic Foundations', text: '1. THEORY & EXERCISE (3.0h): IUPAC Masterclass: Alkanes, Alkenes, Alkynes, Halides, Alcohols, Carbonyls rules (40 structures).' },
+          { stage: 'theory', name: 'Maths Ch 5 Theory', text: '1. THEORY & EXERCISE (3.0h): Continuity definition, Left/Right hand limits, Finding $k$-values (Ex 5.1 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 25 MCQs on Lorentz Force + 30 MCQs on Organic IUPAC Naming.' },
+          { stage: 'arc', name: 'Winter Arc Fuel', text: 'Legs & Calves • 2650 kcal • 15 min English Grammar.' }
+        ]
+      },
+      {
+        day: 16, week: 'w3', title: 'Day 16: Biot-Savart, Aromatic Naming & Chain Rule/Implicit (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 4 Theory', text: '1. THEORY & EXAMPLES (3.0h): Biot-Savart Law vector form, Magnetic field on circular current loop axis ($B=\\frac{\\mu_0 I R^2}{2(R^2+x^2)^{3/2}}$).' },
+          { stage: 'theory', name: 'Organic Foundations', text: '1. THEORY & EXERCISE (3.0h): Aromatic IUPAC & Common Naming (Toluene, Phenol, Aniline, Anisole, Benzaldehyde) + 30 PYQs.' },
+          { stage: 'theory', name: 'Maths Ch 5 Theory', text: '1. THEORY & EXERCISE (3.0h): Differentiability, Chain Rule, Implicit functions & Inverse Trig derivatives (Ex 5.2 & 5.3).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 30 MCQs on Biot-Savart + 25 MCQs on Implicit & Inverse Trig Differentiation.' },
+          { stage: 'arc', name: 'Winter Arc Chest', text: 'Chest & Triceps • 2600 kcal • 3.5L Water.' }
+        ]
+      },
+      {
+        day: 17, week: 'w3', title: 'Day 17: Ampere\'s Law, Haloalkanes Ch 6 Entry & Logarithmic Diff (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 4 Theory', text: '1. THEORY & EXAMPLES (3.0h): Ampere\'s Circuital Law and application to long straight wire and Solenoid (Eg 4.7, 4.8).' },
+          { stage: 'theory', name: 'Chemistry Ch 6 Theory', text: '1. THEORY & EXAMPLES (3.0h): Haloalkanes/Haloarenes classification, C-X bond nature, Preparation from alcohols ($SOCl_2, PCl_5$, Lucas).' },
+          { stage: 'theory', name: 'Maths Ch 5 Theory', text: '1. THEORY & EXERCISE (3.0h): Logarithmic Differentiation ($u^v$ form) & Parametric Differentiation (Ex 5.4, 5.5, 5.6).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 25 MCQs on Solenoids + 30 MCQs on Logarithmic Differentiation.' },
+          { stage: 'arc', name: 'Winter Arc Back', text: 'Pull Workout (Deadlifts & Pullups) • High calorie shake.' }
+        ]
+      },
+      {
+        day: 18, week: 'w3', title: '🔥 DAY 18: MCG, SN1 vs SN2 Mechanisms & 2nd Order Derivatives (12.0h)', isTest: false, hours: 12.0,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 4 Theory', text: '1. THEORY & EXERCISE (3.0h): Force between parallel currents, Moving Coil Galvanometer (MCG) & Conversion to Ammeter/Voltmeter.' },
+          { stage: 'theory', name: 'Chemistry Ch 6 Theory', text: '1. THEORY & EXAMPLES (3.5h): **$SN_1$ and $SN_2$ Mechanisms in Deep Depth** (Kinetics, Steric, Stability, Walden Inversion).' },
+          { stage: 'theory', name: 'Maths Ch 5 Theory', text: '1. THEORY & EXERCISE (3.0h): Second Order Derivatives ($d^2y/dx^2$) + Rolle\'s & Mean Value Theorem (Ex 5.7 & Misc).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): 30 MCQs on SN1/SN2 reactivity + 30 MCQs on MCG & Parallel wires.' },
+          { stage: 'arc', name: 'Winter Arc Shoulders', text: 'Shoulders & Arms • 2600 kcal intake.' }
+        ]
+      },
+      {
+        day: 19, week: 'w3', title: '🏆 DAY 19: EXAM: Physics Ch 4 & Maths Ch 5 Conquered! (12.0h)', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'mcq', name: 'Physics Ch 4 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Biot-Savart, Solenoid, MCG timed sprint.' },
+          { stage: 'exam', name: 'Physics Ch 4 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Ch 4 (Lorentz, Biot-Savart, MCG). Target: 27+/30. (Physics Ch 4 Sealed!)' },
+          { stage: 'mcq', name: 'Maths Ch 5 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Differentiation & Continuity master drill.' },
+          { stage: 'exam', name: 'Maths Ch 5 Exam', text: '5. EXAM (1.5h): 35-Mark Strict Exam on Calculus Differentiation. Target: 30+/35. (Maths Ch 5 Sealed!)' },
+          { stage: 'theory', name: 'Chemistry Ch 6 Reactions', text: '1. THEORY (2.5h): $\\beta$-Elimination (Saytzeff Rule), Reaction with metals (Grignard Reagent $RMgX$).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 50 MCQs): Saytzeff elimination & Grignard conversions.' },
+          { stage: 'arc', name: 'Winter Arc Core', text: 'Core & Abs • 15 min Italian vocabulary practice.' }
+        ]
+      },
+      {
+        day: 20, week: 'w3', title: 'Day 20: Magnetism Ch 5, Haloarenes & AOD Rate of Change (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 5 Theory', text: '1. THEORY & EXAMPLES (3.0h): Bar magnet as equivalent solenoid, Bohr Magneton, Earth\'s Magnetism (Declination, Dip, $B_h$).' },
+          { stage: 'theory', name: 'Chemistry Ch 6 Theory', text: '1. THEORY & EXERCISE (3.0h): Haloarenes low reactivity, Electrophilic substitution (Halogenation, Nitration, Sulphonation, Friedel-Crafts).' },
+          { stage: 'theory', name: 'Maths Ch 6 Theory', text: '1. THEORY & EXERCISE (3.0h): Rate of Change of quantities ($ds/dt, dv/dt, dA/dt$, Ex 6.1 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 25 MCQs on Earth\'s Magnetism + 30 MCQs on AOD Rate of Change.' },
+          { stage: 'arc', name: 'Winter Arc Rest', text: 'Active recovery • Healthy meals • Good rest.' }
+        ]
+      },
+      {
+        day: 21, week: 'w3', title: 'Day 21: Magnetic Materials, Haloalkanes Reactions & Increasing/Decreasing (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 5 Theory', text: '1. THEORY & EXERCISE (3.0h): Dia-, Para-, and Ferro-magnetic materials, Curie\'s Law, Hysteresis curve basics (Ex 5.1-5.12).' },
+          { stage: 'theory', name: 'Chemistry Ch 6 Theory', text: '1. THEORY & EXERCISE (3.0h): Wurtz-Fittig reaction, Fittig reaction, Polyhalogen compounds (Chloroform, DDT, Freons, Ex 6.16-6.22).' },
+          { stage: 'theory', name: 'Maths Ch 6 Theory', text: '1. THEORY & EXERCISE (3.0h): Strictly Increasing and Decreasing functions ($f\'(x)>0$), finding intervals (Ex 6.2 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 30 MCQs on Magnetic Materials + 25 MCQs on Increasing/Decreasing intervals.' },
+          { stage: 'arc', name: 'Winter Arc Fuel', text: 'Legs Day • 2650 kcal • Water 3.5L.' }
+        ]
+      },
+
+      // ==================== WEEK 4 ====================
+      {
+        day: 22, week: 'w4', title: '🏆 DAY 22: EXAM: Physics Ch 5 & Chem Ch 6 Sealed! + Maxima/Minima (12.0h)', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'mcq', name: 'Physics Ch 5 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Magnetism & Magnetic Materials sprint.' },
+          { stage: 'exam', name: 'Physics Ch 5 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Ch 5. Target: 27+/30. (Physics Ch 5 Sealed!)' },
+          { stage: 'mcq', name: 'Chemistry Ch 6 MCQs', text: '4. MCQs (2.0h • 60 MCQs): Haloalkanes & Haloarenes comprehensive sprint.' },
+          { stage: 'exam', name: 'Chemistry Ch 6 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Organic Ch 6 (SN1/SN2, Saytzeff). Target: 26+/30. (Chemistry Ch 6 Sealed!)' },
+          { stage: 'theory', name: 'Maths Ch 6 Theory', text: '1. THEORY & EXERCISE (2.5h): Local Maxima & Minima, First & Second Derivative Tests (Ex 6.5 Q1-Q12).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 50 MCQs): Maxima and Minima calculus MCQs.' },
+          { stage: 'arc', name: 'Winter Arc Power', text: 'Chest & Arms • 2650 kcal nutrition.' }
+        ]
+      },
+      {
+        day: 23, week: 'w4', title: 'Day 23: EMI Faraday/Lenz, AOD 4-Mark Geometric Problems & LPP (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 6 Theory', text: '1. THEORY & EXAMPLES (3.5h): Magnetic Flux, Faraday\'s Laws, Lenz\'s Law, Motional EMF ($\\varepsilon=Blv$, Eg 6.1-6.6).' },
+          { stage: 'theory', name: 'Maths Ch 6 Optimization', text: '1. THEORY & EXERCISE (3.0h): Geometric optimization word problems (Cylinders, Cones, Spheres - Fixed 4-Mark Questions, Ex 6.5 Q17-Q26).' },
+          { stage: 'theory', name: 'Maths Ch 12 LPP', text: '1. THEORY & EXERCISE (2.5h): Linear Programming formulation, Feasible Region & Corner Point Method (Ex 12.1 complete).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 50 MCQs): 25 MCQs on Motional EMF + 25 MCQs on LPP Corner Points.' },
+          { stage: 'arc', name: 'Winter Arc Squats', text: 'Squats & Lunges • High carb post-workout meal.' }
+        ]
+      },
+      {
+        day: 24, week: 'w4', title: '🏆 DAY 24: EXAM: Maths Ch 6 & Ch 12 Conquered! + Inductance/AC Generator (12.0h)', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 6 Theory', text: '1. THEORY & EXERCISE (3.0h): Self-inductance ($L$), Mutual inductance ($M$), Energy ($1/2 LI^2$), AC Generator working (Ex 6.6-6.17).' },
+          { stage: 'mcq', name: 'Physics Ch 6 MCQs', text: '4. MCQs (2.0h • 55 MCQs): EMI & AC Generator master drill.' },
+          { stage: 'exam', name: 'Physics Ch 6 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on EMI. Target: 27+/30. (Physics Ch 6 Sealed!)' },
+          { stage: 'mcq', name: 'Maths Ch 6 & 12 MCQs', text: '4. MCQs (2.0h • 50 MCQs): AOD & LPP timed sprint.' },
+          { stage: 'exam', name: 'Maths Ch 6 & 12 Exam', text: '5. EXAM (1.5h): 35-Mark Strict Exam (AOD 4-marker + LPP). Target: 32+/35. (Maths Ch 6 & 12 Sealed!)' },
+          { stage: 'arc', name: 'Winter Arc Pull', text: 'Back & Core • 15 min Italy visa & DSU scholarship documents.' }
+        ]
+      },
+      {
+        day: 25, week: 'w4', title: 'Day 25: AC Circuits (R, L, C) & Maths Ch 1 (Relations Start at Month-End)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 7 Theory', text: '1. THEORY & EXAMPLES (3.5h): AC applied to Resistor, Inductor, Capacitor. Reactance ($X_L=\\omega L, X_C=1/\\omega C$), Phasor diagrams (Eg 7.1-7.3).' },
+          { stage: 'theory', name: 'Maths Ch 1 Relations', text: '1. THEORY & EXERCISE (3.0h): Types of Relations: Empty, Universal, Reflexive, Symmetric, Transitive, Equivalence (Ex 1.1 complete).' },
+          { stage: 'theory', name: 'Chemistry Physical Drill', text: '1. THEORY (2.5h): Master Physical Chemistry Formula Matrix (Raoult, Nernst, Kohlrausch, Arrhenius).' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 55 MCQs): 30 MCQs on AC Reactance + 25 MCQs on Equivalence Relations.' },
+          { stage: 'arc', name: 'Winter Arc Shoulders', text: 'Overhead Press • 2600 kcal nutrition.' }
+        ]
+      },
+      {
+        day: 26, week: 'w4', title: 'Day 26: Series LCR Circuit, Resonance & Maths Ch 1 Types of Functions (11.5h)', isTest: false, hours: 11.5,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 7 Theory', text: '1. THEORY & EXAMPLES (3.5h): Series LCR circuit phasor derivation, Impedance ($Z$), Resonance ($\\omega_0=1/\\sqrt{LC}$), Q-factor (Eg 7.4, 7.5).' },
+          { stage: 'theory', name: 'Maths Ch 1 Functions', text: '1. THEORY & EXERCISE (3.0h): Types of Functions: One-One (Injective), Onto (Surjective), Bijective proofs (Ex 1.2 complete).' },
+          { stage: 'exercise', name: 'Chemistry Organic Drill', text: '3. EXERCISE (2.5h): 1-step and 2-step Organic Conversion Roadmap practice on Haloalkanes.' },
+          { stage: 'mcq', name: '⚡ INTENSIVE MCQ DRILL', text: '4. MCQs (2.5h • 60 MCQs): 30 MCQs on LCR Resonance + 30 MCQs on Injective/Surjective functions.' },
+          { stage: 'arc', name: 'Winter Arc Hydration', text: 'Full body circuit • 4L water • sleep hygiene.' }
+        ]
+      },
+      {
+        day: 27, week: 'w4', title: '🏆 DAY 27: EXAM: Physics Ch 7 & Maths Ch 1 Sealed! All Chapters Complete! (12.0h)', isTest: true, hours: 12.0,
+        tasks: [
+          { stage: 'theory', name: 'Physics Ch 7 Power', text: '1. THEORY (2.0h): Power in AC ($P=V_{rms} I_{rms} \\cos\\Phi$), Power factor, Wattless current, Transformers (Working & losses).' },
+          { stage: 'mcq', name: 'Physics Ch 7 MCQs', text: '4. MCQs (2.0h • 60 MCQs): AC Circuits & Transformers master sprint.' },
+          { stage: 'exam', name: 'Physics Ch 7 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on AC. Target: 27+/30. (Physics Ch 7 Sealed!)' },
+          { stage: 'mcq', name: 'Maths Ch 1 MCQs', text: '4. MCQs (2.0h • 50 MCQs): Relations & Functions timed sprint.' },
+          { stage: 'exam', name: 'Maths Ch 1 Exam', text: '5. EXAM (1.5h): 30-Mark Strict Exam on Ch 1. Target: 28+/30. (Maths Ch 1 Sealed!)' },
+          { stage: 'arc', name: 'Winter Arc Prep', text: 'Mental readiness & early rest for tomorrow\'s Grand Board Simulation!' }
+        ]
+      },
+      {
+        day: 28, week: 'w4', title: '🏆 DAY 28: THE GRAND 1-MONTH SIMULATION EXAM (11.0 Hours Load)', isTest: true, hours: 11.0,
+        tasks: [
+          { stage: 'exam', name: 'Physics Part 1 Full Paper', text: '5. EXAM (3.0h): 50 Marks GSEB Board Simulation (Chapters 1 to 7). Real exam conditions.' },
+          { stage: 'exam', name: 'Chemistry Full Paper', text: '5. EXAM (3.0h): 50 Marks Comprehensive Exam (Chapters 1, 2, 3, and 6). Real exam conditions.' },
+          { stage: 'exam', name: 'Maths Full Paper', text: '5. EXAM (3.0h): 50 Marks Comprehensive Exam (Chapters 3, 4, 2, 5, 6, 12, and 1). Real exam conditions.' },
+          { stage: 'arc', name: 'Victory Audit', text: 'Strict evaluation of all 3 papers. Calculate average % score across PCM!' }
+        ]
+      },
+
+      // ==================== BUFFER & SEAL DAYS ====================
+      {
+        day: 29, week: 'w4', title: 'Day 29: Post-Exam Error Audit & Weak Spot Surgery (10.0 Hours Load)', isTest: false, hours: 10.0,
+        tasks: [
+          { stage: 'exercise', name: 'Physics Error Audit', text: 'Re-solve every single mistake from Day 28 paper. Master the underlying concept.' },
+          { stage: 'exercise', name: 'Chemistry Error Audit', text: 'Fix any forgotten IUPAC rules, reaction conditions, or numerical calculation errors.' },
+          { stage: 'exercise', name: 'Maths Error Audit', text: 'Re-work algebraic steps and derivative chain rule slips.' },
+          { stage: 'arc', name: 'Winter Arc Weigh-in', text: 'Final Month 1 Weight check. Benchmark muscle gain & strength progress towards 65 kg.' }
+        ]
+      },
+      {
+        day: 30, week: 'w4', title: '🌟 DAY 30: COMPLETE SYLLABUS SEAL & LEVEL UP (8.0 Hours Load)', isTest: false, hours: 8.0,
+        tasks: [
+          { stage: 'exam', name: 'Physics Part 1 Sealed', text: 'Chapters 1 to 7 are now 100% mastered and board ready!' },
+          { stage: 'exam', name: 'Chemistry Physical & Ch 6 Sealed', text: 'Physical chemistry complete, Organic entry unlocked with flying colors.' },
+          { stage: 'exam', name: 'Maths Core Sealed', text: 'Matrices, Determinants, ITF, Calculus, LPP & Relations/Functions 100% conquered!' },
+          { stage: 'arc', name: 'Monarch AGI Seal', text: 'Aryan Paladiya is now 85%+ GSEB Board Ready and in prime position for Italy DSU Scholarship!' }
+        ]
+      }
+    ];
+
+    // LOCAL STORAGE & CLOUD PEER SYNC STATE
+    const STORAGE_KEY = 'astra_study_partner_v9';
+    let userState = { 
+      checked: {}, 
+      notes: {}, 
+      lastUpdatedBy: 'Aryan', 
+      lastUpdateTimestamp: Date.now() 
+    };
+
+    // Live Peer Synchronization Settings
+    let syncConfig = {
+      userName: 'Aryan',
+      roomKey: 'aryan-study-2026',
+      connected: false
+    };
+
+    function loadSyncConfig() {
+      try {
+        const raw = localStorage.getItem('astra_sync_config_v1');
+        if (raw) syncConfig = Object.assign(syncConfig, JSON.parse(raw));
+        // Check URL query parameters for instant pairing on mobile
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('room')) {
+          syncConfig.roomKey = urlParams.get('room');
+        }
+        if (urlParams.get('user') && !localStorage.getItem('astra_sync_config_v1')) {
+          syncConfig.userName = urlParams.get('user');
+        }
+      } catch (e) {}
+    }
+
+    function saveSyncConfig() {
+      try {
+        localStorage.setItem('astra_sync_config_v1', JSON.stringify(syncConfig));
+      } catch (e) {}
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            userState.checked = parsed.checked || {};
+            userState.notes = parsed.notes || {};
+            userState.lastUpdatedBy = parsed.lastUpdatedBy || 'Aryan';
+            userState.lastUpdateTimestamp = parsed.lastUpdateTimestamp || Date.now();
+          }
+        }
+      } catch (e) {}
+    }
+
+    function saveState(broadcast = true) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(userState));
+        if (broadcast) {
+          publishStateToPeer();
+        }
+      } catch (e) {}
+    }
+
+    let activeWeek = 'all';
+    let searchQuery = '';
+
+    function filterWeek(wk) {
+      activeWeek = wk;
+      document.querySelectorAll('.week-btn').forEach(b => {
+        b.classList.remove('bg-cyan-500', 'text-slate-950', 'font-black');
+        b.classList.add('bg-slate-800', 'text-slate-300', 'font-semibold');
+      });
+      event.target.classList.remove('bg-slate-800', 'text-slate-300', 'font-semibold');
+      event.target.classList.add('bg-cyan-500', 'text-slate-950', 'font-black');
+      renderDashboard();
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+      renderDashboard();
+    }
+
+
+
+    function scrollToCurrentDay() {
+      for (const d of roadmapData) {
+        const anyPending = d.tasks.some((_, idx) => !userState.checked[`d${d.day}_t${idx}`]);
+        if (anyPending) {
+          const el = document.getElementById(`dayCard_${d.day}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-cyan-400');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-cyan-400'), 1800);
+            playTone(880, 0.1, 'sine');
+          }
+          return;
+        }
+      }
+    }
+
+    function renderDashboard() {
+      const container = document.getElementById('daysGrid');
+      container.innerHTML = '';
+
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let completedDays = 0;
+      let firstPendingDay = null;
+      let totalMcqsDone = 0;
+
+      roadmapData.forEach((dayData) => {
+        let show = true;
+        if (activeWeek === 'tests' && !dayData.isTest) show = false;
+        if (['w1', 'w2', 'w3', 'w4'].includes(activeWeek) && dayData.week !== activeWeek) show = false;
+
+        if (searchQuery) {
+          const matchTitle = dayData.title.toLowerCase().includes(searchQuery);
+          const matchTask = dayData.tasks.some(t => t.name.toLowerCase().includes(searchQuery) || t.text.toLowerCase().includes(searchQuery));
+          if (!matchTitle && !matchTask) show = false;
+        }
+
+        let dayAllDone = true;
+        let dayTaskCount = dayData.tasks.length;
+        let dayDoneCount = 0;
+
+        dayData.tasks.forEach((t, tIdx) => {
+          totalTasks++;
+          const tId = `d${dayData.day}_t${tIdx}`;
+          if (userState.checked[tId]) {
+            completedTasks++;
+            dayDoneCount++;
+            if (t.stage === 'mcq') totalMcqsDone += 50;
+          } else {
+            dayAllDone = false;
+          }
+        });
+
+        if (dayAllDone && dayTaskCount > 0) completedDays++;
+        if (!dayAllDone && !firstPendingDay) firstPendingDay = dayData;
+
+        if (!show) return;
+
+        const card = document.createElement('div');
+        card.id = `dayCard_${dayData.day}`;
+        card.className = `glass-card rounded-2xl p-4 md:p-6 transition-all ${dayAllDone ? 'day-completed' : ''}`;
+
+        let tasksHtml = '';
+        dayData.tasks.forEach((task, tIdx) => {
+          const tId = `d${dayData.day}_t${tIdx}`;
+          const isDone = !!userState.checked[tId];
+
+          let pillClass = 'pill-theory';
+          let pillLabel = '1. Theory';
+          if (task.stage === 'example') { pillClass = 'pill-example'; pillLabel = '2. Example'; }
+          else if (task.stage === 'exercise') { pillClass = 'pill-exercise'; pillLabel = '3. Exercise'; }
+          else if (task.stage === 'mcq') { pillClass = 'pill-mcq'; pillLabel = '4. ⚡ 50+ MCQs'; }
+          else if (task.stage === 'exam') { pillClass = 'pill-exam'; pillLabel = '5. Exam'; }
+          else if (task.stage === 'arc') { pillClass = 'pill-arc'; pillLabel = '🐺 Winter Arc'; }
+
+          tasksHtml += `
+            <div class="flex items-start gap-3 p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition">
+              <input type="checkbox" id="${tId}" class="astra-check mt-0.5" ${isDone ? 'checked' : ''} onchange="toggleTask('${tId}', ${dayData.day})">
+              <label for="${tId}" class="cursor-pointer select-none flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <span class="step-pill ${pillClass}">${pillLabel}</span>
+                  <span class="text-xs font-bold text-slate-200 tracking-wide">${task.name}</span>
+                </div>
+                <div class="text-sm font-medium ${isDone ? 'line-through text-slate-500' : 'text-slate-100'} leading-relaxed">
+                  ${task.text}
+                </div>
+              </label>
+            </div>
+          `;
+        });
+
+        const noteKey = `note_d${dayData.day}`;
+        const savedNote = userState.notes[noteKey] || '';
+
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-3">
+              <span class="w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg ${dayData.isTest ? 'bg-purple-500/25 text-purple-300 border border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/35'}">
+                ${dayData.day}
+              </span>
+              <div>
+                <div class="flex items-center gap-2.5">
+                  <h2 class="text-base md:text-lg font-bold text-white heading-font">${dayData.title}</h2>
+                  ${dayData.isTest ? '<span class="px-2 py-0.5 rounded text-[10px] font-black bg-purple-500 text-slate-950 uppercase tracking-widest shadow-sm">Exam Milestone</span>' : ''}
+                </div>
+                <span class="text-xs text-slate-400 font-medium">Daily Target Load: <strong class="text-amber-400 font-bold">${dayData.hours} Hours</strong> • Week ${dayData.week.replace('w','')}</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 self-end sm:self-auto">
+              <span class="text-xs font-bold px-3 py-1 rounded-lg ${dayAllDone ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">
+                ${dayDoneCount} / ${dayTaskCount} Steps Mastered
+              </span>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            ${tasksHtml}
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-800/60 flex items-center gap-2">
+            <input type="text" placeholder="📝 Quick score log / personal reflection for Day ${dayData.day}..." 
+                   value="${savedNote}" onchange="saveNote('${noteKey}', this.value)"
+                   class="w-full bg-slate-950/60 text-xs text-slate-300 placeholder-slate-600 px-3 py-1.5 rounded-lg border border-slate-800/80 focus:outline-none focus:border-cyan-500/50">
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      if (firstPendingDay) {
+        document.getElementById('directiveText').innerText = `Focus Day ${firstPendingDay.day}: ${firstPendingDay.title} (${firstPendingDay.hours} Hours • 50+ MCQs)`;
+        const pendingEl = document.getElementById('lockPendingTasksText');
+        if (pendingEl) pendingEl.innerText = `Day ${firstPendingDay.day} has pending milestones!`;
+      } else {
+        document.getElementById('directiveText').innerText = `🌟 100% MASTERY ACHIEVED: All 30 Days Completed! Ready for 85%+ in GSEB Science!`;
+      }
+
+      document.getElementById('statTotalTasks').innerText = totalTasks;
+      document.getElementById('statTasks').innerText = completedTasks;
+      document.getElementById('statDays').innerText = completedDays;
+      document.getElementById('statMcqTotal').innerText = totalMcqsDone;
+
+      const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      document.getElementById('globalPct').innerText = `${pct}%`;
+
+      const predGseb = (68.5 + (pct * 0.27)).toFixed(1);
+      document.getElementById('statGsebPred').innerText = `${Math.min(96.5, predGseb)}%`;
+
+      const ring = document.getElementById('globalRing');
+      const circumference = 2 * Math.PI * 40;
+      const offset = circumference - (pct / 100) * circumference;
+      ring.style.strokeDashoffset = offset;
+
+      const coherence = (100 - (totalTasks - completedTasks) * 0.08).toFixed(1);
+      document.getElementById('coherenceText').innerText = `${Math.max(89.5, coherence)}%`;
+    }
+
+    function toggleTask(tId, dayNum) {
+      userState.lastUpdatedBy = syncConfig.userName || 'Aryan';
+      userState.lastUpdateTimestamp = Date.now();
+      if (userState.checked[tId]) {
+        delete userState.checked[tId];
+        playTone(380, 0.05, 'sawtooth');
+      } else {
+        userState.checked[tId] = true;
+        playTone(740, 0.08, 'sine');
+        setTimeout(() => {
+          const dayTasks = roadmapData.find(d => d.day === dayNum)?.tasks || [];
+          const allDone = dayTasks.every((_, idx) => userState.checked[`d${dayNum}_t${idx}`]);
+          if (allDone) playChord();
+        }, 100);
+      }
+      saveState(true);
+      renderDashboard();
+    }
+
+    function saveNote(key, val) {
+      userState.notes[key] = val;
+      userState.lastUpdatedBy = syncConfig.userName || 'Aryan';
+      userState.lastUpdateTimestamp = Date.now();
+      saveState(true);
+      playTone(920, 0.04, 'sine');
+    }
+
+    // 5. POMODORO TIMER
+    let pInterval = null;
+    let pSeconds = 50 * 60;
+    let pRunning = false;
+
+    function updatePDisplay() {
+      const m = Math.floor(pSeconds / 60);
+      const s = pSeconds % 60;
+      document.getElementById('timerText').innerText = 
+        `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function togglePomodoro() {
+      const btn = document.getElementById('timerBtn');
+      if (pRunning) {
+        clearInterval(pInterval);
+        pRunning = false;
+        btn.innerText = 'Resume';
+        btn.className = 'px-3 py-1 text-xs font-black rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition';
+      } else {
+        pRunning = true;
+        btn.innerText = 'Pause';
+        btn.className = 'px-3 py-1 text-xs font-black rounded-lg bg-amber-600 hover:bg-amber-500 text-white transition';
+        playTone(880, 0.1, 'triangle');
+        pInterval = setInterval(() => {
+          if (pSeconds > 0) {
+            pSeconds--;
+            updatePDisplay();
+          } else {
+            clearInterval(pInterval);
+            pRunning = false;
+            btn.innerText = 'Start';
+            btn.className = 'px-3 py-1 text-xs font-black rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition';
+            playChord();
+            alert('🔔 Astra Warden Session Complete! Rest 10 minutes & hydrate.');
+            pSeconds = 50 * 60;
+            updatePDisplay();
+          }
+        }, 1000);
+      }
+    }
+
+    function resetPomodoro() {
+      clearInterval(pInterval);
+      pRunning = false;
+      pSeconds = 50 * 60;
+      updatePDisplay();
+      const btn = document.getElementById('timerBtn');
+      btn.innerText = 'Start';
+      btn.className = 'px-3 py-1 text-xs font-black rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition';
+    }
+
+    // 6. BACKUP & RESET
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userState, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `aryan_warden_strict_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    }
+
+    // 7. SHARE WITH FRIEND / MOBILE PHONE (NO COMPUTER)
+    function openShareModal() {
+      document.getElementById('shareModal').classList.remove('hidden');
+      document.getElementById('shareModal').classList.add('flex');
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').classList.add('hidden');
+      document.getElementById('shareModal').classList.remove('flex');
+    }
+
+    function copyWhatsAppRoadmap() {
+      let text = `🚀 *MONARCH ASTRA: 30-DAY CLASS 12 STUDY ROADMAP (ENGLISH)* 🚀\n`;
+      text += `🎯 *Target:* 85%+ GSEB Board & University Entrance\n`;
+      text += `📚 *Syllabus Covered:* \n`;
+      text += `• Physics: Ch 1 to 7 (Part 1 Complete)\n`;
+      text += `• Chemistry: Ch 1 to 3 + IUPAC + Ch 6 Haloalkanes\n`;
+      text += `• Maths: Ch 3, 4, 2, 5, 6, 12 and Ch 1 (Relations at month end)\n\n`;
+      text += `⚡ *Protocol:* 1. Theory ➔ 2. Examples ➔ 3. Exercises ➔ 4. 50+ MCQs ➔ 5. Chapter Exam\n`;
+      text += `===================================\n\n`;
+
+      roadmapData.forEach(d => {
+        text += `📅 *${d.title}* (${d.hours} Hours)\n`;
+        d.tasks.forEach(t => {
+          text += `  • [${t.name}] ${t.text}\n`;
+        });
+        text += `\n`;
+      });
+
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copySummaryBtn');
+        if (btn) {
+          btn.innerText = '✅ Copied to Clipboard! Paste in WhatsApp';
+          btn.classList.remove('bg-purple-600', 'hover:bg-purple-500');
+          btn.classList.add('bg-emerald-600');
+          setTimeout(() => {
+            btn.innerText = '📋 Copy WhatsApp Roadmap Text';
+            btn.classList.add('bg-purple-600');
+            btn.classList.remove('bg-emerald-600');
+          }, 3000);
+        }
+      }).catch(err => {
+        alert('Could not copy automatically. You can print/save as PDF to share!');
+      });
+    }
+
+    // 8. LIVE PEER SYNCHRONIZATION ENGINE (MQTT over WebSocket)
+    let mqttClient = null;
+    let isRemoteUpdate = false;
+
+    function getTopic() {
+      const cleanRoom = (syncConfig.roomKey || 'aryan-study-2026').replace(/[^a-zA-Z0-9_-]/g, '');
+      return `monarch_astra/study_sync/${cleanRoom}`;
+    }
+
+    function initMqttSync() {
+      if (typeof mqtt === 'undefined') {
+        console.warn('MQTT client library not loaded, running in local storage mode.');
+        updateSyncBadge(false, 'Local Storage Only');
+        return;
+      }
+
+      try {
+        const brokerEndpoints = [
+          'wss://broker.emqx.io:8084/mqtt',
+          'wss://broker.hivemq.com:8884/mqtt'
+        ];
+        
+        const brokerUrl = brokerEndpoints[0];
+        const clientId = 'astra_' + (syncConfig.userName || 'user') + '_' + Math.random().toString(16).substring(2, 8);
+
+        updateSyncBadge(false, 'Connecting...');
+
+        if (mqttClient) {
+          try { mqttClient.end(true); } catch(e){}
+        }
+
+        mqttClient = mqtt.connect(brokerUrl, {
+          clientId: clientId,
+          clean: true,
+          connectTimeout: 7000,
+          reconnectPeriod: 5000
+        });
+
+        mqttClient.on('connect', () => {
+          syncConfig.connected = true;
+          updateSyncBadge(true, `ROOM: #${syncConfig.roomKey}`);
+          const topic = getTopic();
+          mqttClient.subscribe(topic, { qs: 1 }, (err) => {
+            if (!err) {
+              console.log('Subscribed to live study room:', topic);
+              // Publish initial heartbeat to request/announce sync
+              publishStateToPeer(false);
+            }
+          });
+        });
+
+        mqttClient.on('message', (topic, payload) => {
+          try {
+            const data = JSON.parse(payload.toString());
+            handleIncomingPeerMessage(data);
+          } catch(e) {
+            console.error('Failed to parse incoming sync payload:', e);
+          }
+        });
+
+        mqttClient.on('error', (err) => {
+          console.warn('MQTT Connection Error:', err);
+          updateSyncBadge(false, 'Reconnecting...');
+        });
+
+        mqttClient.on('close', () => {
+          syncConfig.connected = false;
+          updateSyncBadge(false, 'Disconnected');
+        });
+
+      } catch(e) {
+        console.error('MQTT initialization failure:', e);
+        updateSyncBadge(false, 'Local Mode');
+      }
+    }
+
+    function updateSyncBadge(isConnected, label) {
+      const badge = document.getElementById('syncBadge');
+      const text = document.getElementById('syncStatusText');
+      const modalStatus = document.getElementById('modalConnectionStatus');
+      
+      if (text) text.innerText = label;
+
+      if (isConnected) {
+        badge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 font-bold tracking-wider cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.3)]";
+        if (modalStatus) {
+          modalStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Live Connected';
+          modalStatus.className = 'font-bold text-emerald-400 flex items-center gap-1.5';
+        }
+      } else {
+        badge.className = "flex items-center gap-2 px-3 py-1 rounded-full bg-amber-950/80 border border-amber-500/50 text-amber-300 font-bold tracking-wider cursor-pointer";
+        if (modalStatus) {
+          modalStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> Reconnecting...';
+          modalStatus.className = 'font-bold text-amber-400 flex items-center gap-1.5';
+        }
+      }
+    }
+
+    function publishStateToPeer(notifySound = true) {
+      if (!mqttClient || !syncConfig.connected) return;
+      try {
+        const payload = JSON.stringify({
+          type: 'SYNC_STATE',
+          sender: syncConfig.userName || 'Aryan',
+          timestamp: Date.now(),
+          state: userState
+        });
+        mqttClient.publish(getTopic(), payload, { qos: 1, retain: true });
+      } catch(e) {
+        console.error('Failed to publish sync payload:', e);
+      }
+    }
+
+    function handleIncomingPeerMessage(data) {
+      if (!data || data.type !== 'SYNC_STATE') return;
+      if (data.sender === syncConfig.userName) return; // Ignore own echoes
+
+      // If peer has newer or different state, merge
+      if (data.state && typeof data.state === 'object') {
+        const incomingChecked = data.state.checked || {};
+        const incomingNotes = data.state.notes || {};
+
+        // Merge incoming checks & notes
+        let changed = false;
+        for (const k in incomingChecked) {
+          if (userState.checked[k] !== incomingChecked[k]) {
+            userState.checked[k] = incomingChecked[k];
+            changed = true;
+          }
+        }
+        for (const k in incomingNotes) {
+          if (userState.notes[k] !== incomingNotes[k]) {
+            userState.notes[k] = incomingNotes[k];
+            changed = true;
+          }
+        }
+
+        if (changed || data.timestamp > (userState.lastUpdateTimestamp || 0)) {
+          userState.lastUpdatedBy = data.sender;
+          userState.lastUpdateTimestamp = data.timestamp;
+          saveState(false); // save without echo broadcasting
+          renderDashboard();
+          playTone(600, 0.08, 'sine');
+          showToastNotification(`⚡ ${data.sender} synchronized study progress!`);
+        }
+      }
+    }
+
+    function showToastNotification(msg) {
+      let toast = document.getElementById('syncToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'syncToast';
+        toast.className = 'fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-cyan-500/50 text-cyan-200 text-xs font-bold shadow-2xl flex items-center gap-2 transition-all transform translate-y-10 opacity-0 pointer-events-none';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> ${msg}`;
+      toast.classList.remove('translate-y-10', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+      }, 3500);
+    }
+
+    // Room Modal Controls
+    function openRoomModal() {
+      document.getElementById('syncUserNameInput').value = syncConfig.userName || 'Aryan';
+      document.getElementById('syncRoomKeyInput').value = syncConfig.roomKey || 'aryan-study-2026';
+      document.getElementById('roomModal').classList.remove('hidden');
+      document.getElementById('roomModal').classList.add('flex');
+    }
+
+    function closeRoomModal() {
+      document.getElementById('roomModal').classList.add('hidden');
+      document.getElementById('roomModal').classList.remove('flex');
+    }
+
+    function generateRandomRoom() {
+      const randomKey = 'study-' + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('syncRoomKeyInput').value = randomKey;
+    }
+
+    function applyRoomSettings() {
+      const newName = document.getElementById('syncUserNameInput').value.trim() || 'Aryan';
+      const newRoom = document.getElementById('syncRoomKeyInput').value.trim() || 'aryan-study-2026';
+      syncConfig.userName = newName;
+      syncConfig.roomKey = newRoom;
+      saveSyncConfig();
+      closeRoomModal();
+      initMqttSync();
+      showToastNotification(`Connected to Room: #${newRoom} as ${newName}`);
+    }
+
+    function copyFriendShareLink() {
+      const room = syncConfig.roomKey || 'aryan-study-2026';
+      // Format file or web URL with parameters
+      let baseUrl = window.location.href.split('?')[0];
+      const shareUrl = `${baseUrl}?room=${encodeURIComponent(room)}&user=Friend`;
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const btn1 = document.getElementById('copyRoomLinkBtn');
+        const btn2 = document.getElementById('copySyncLinkBtn2');
+        if (btn1) btn1.innerText = '✅ Link Copied! Send to Friend';
+        if (btn2) btn2.innerText = '✅ Link Copied! Send to Friend';
+        setTimeout(() => {
+          if (btn1) btn1.innerText = '🔗 Copy Direct Mobile Sync Link';
+          if (btn2) btn2.innerText = '🔗 Copy Direct Live Sync Link';
+        }, 3000);
+      }).catch(err => {
+        prompt('Copy this room sync link and send on WhatsApp:', `${baseUrl}?room=${encodeURIComponent(room)}`);
+      });
+    }
+
+    // Initialize on load
+    loadSyncConfig();
+    loadState();
+    renderDashboard();
+    initMqttSync();
+  </script>
+</body>
+</html>
